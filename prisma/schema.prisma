@@ -24,7 +24,8 @@ model User {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   refreshToken RefreshToken[]
-  contents     Content[] // Relationship to Content
+  contents     Content[]
+  chatGroups   ChatGroup[]
 }
 
 model RefreshToken {
@@ -34,16 +35,27 @@ model RefreshToken {
 }
 
 model Content {
-  id         Int       @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   text       String
   imageUrl   String?
   scheduleAt DateTime?
   endDate    DateTime?
-  active     Boolean   @default(true)
+  active     Boolean     @default(true)
   frequency  String?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime    @default(now())
   userId     Int
-  user       User      @relation(fields: [userId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+  chatGroups ChatGroup[]
+}
+
+model ChatGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  chatId    String   @unique
+  Content   Content? @relation(fields: [contentId], references: [id])
+  contentId Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
 }
 
 enum Role {

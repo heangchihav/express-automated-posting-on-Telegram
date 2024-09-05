@@ -1,4 +1,3 @@
-// checkAndSendContent.ts
 import {
   addDays,
   addWeeks,
@@ -28,12 +27,19 @@ export const checkAndSendContent = async (): Promise<void> => {
       where: {
         active: true,
       },
+      include: {
+        chatGroups: true, // Include related chat groups
+      },
     });
 
     console.log("Found content items:", contents);
 
     for (const content of contents) {
-      const { scheduleAt, frequency, endDate, id, text, imageUrl } = content;
+      const { scheduleAt, frequency, endDate, id, text, imageUrl, chatGroups } =
+        content;
+
+      // Collect all chat IDs to send messages to
+      const chatIds = chatGroups.map((chatGroup) => chatGroup.chatId);
 
       // Case 1: Deactivate if endDate has passed
       if (endDate && isBefore(endDate, now)) {
@@ -48,7 +54,7 @@ export const checkAndSendContent = async (): Promise<void> => {
       // Case 2: Immediate post if both scheduleAt and frequency are missing
       if (!scheduleAt && !frequency) {
         console.log("Posting immediately: No schedule and no frequency.");
-        await sendMessageToTelegram(text, imageUrl);
+        await sendMessageToTelegram(chatIds, text, imageUrl);
         await prisma.content.update({
           where: { id },
           data: { active: false },
@@ -79,7 +85,7 @@ export const checkAndSendContent = async (): Promise<void> => {
       // Case 5: ScheduleAt is in the past, post immediately based on the frequency
       if (scheduleAt && isBefore(scheduleAt, now)) {
         console.log("Content schedule is in the past, posting immediately.");
-        await sendMessageToTelegram(text, imageUrl);
+        await sendMessageToTelegram(chatIds, text, imageUrl);
 
         // Check if the next schedule is past the endDate
         if (endDate && isAfter(now, endDate)) {
@@ -127,7 +133,7 @@ export const checkAndSendContent = async (): Promise<void> => {
       // Case 6: Post today without frequency and deactivate
       if (isSameDay(scheduleAt!, now) && !frequency) {
         console.log("Posting immediately and deactivating content.");
-        await sendMessageToTelegram(text, imageUrl);
+        await sendMessageToTelegram(chatIds, text, imageUrl);
         await prisma.content.update({
           where: { id },
           data: { active: false },
@@ -138,7 +144,7 @@ export const checkAndSendContent = async (): Promise<void> => {
       // Case 7: Post at scheduleAt and reschedule if frequency exists
       if (scheduleAt && isSameDay(scheduleAt, now) && frequency) {
         console.log("Sending message for content ID:", id);
-        await sendMessageToTelegram(text, imageUrl);
+        await sendMessageToTelegram(chatIds, text, imageUrl);
 
         // Calculate the next schedule date based on frequency
         const calculateNextSchedule = frequencyMap[frequency];

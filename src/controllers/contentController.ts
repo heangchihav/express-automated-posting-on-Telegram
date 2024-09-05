@@ -1,4 +1,3 @@
-// src/controllers/contentController.ts
 import { Request, Response } from "express";
 import {
   createContentSchema,
@@ -16,8 +15,7 @@ export const addContent = async (
     // Validate request data
     const validatedData = createContentSchema.parse(req.body);
     const userId = (req.user as User).id;
-    const { text, imageUrl, scheduleAt, frequency, active, endDate } =
-      validatedData;
+    const { text, imageUrl, scheduleAt, frequency, active, endDate, chatGroupIds } = validatedData;
 
     const content = await prisma.content.create({
       data: {
@@ -28,6 +26,9 @@ export const addContent = async (
         frequency,
         active,
         user: { connect: { id: userId } },
+        chatGroups: chatGroupIds ? {
+          connect: chatGroupIds.map((id: number) => ({ id })),
+        } : undefined,
       },
     });
 
@@ -48,8 +49,7 @@ export const updateContent = async (
     const userId = (req.user as User).id;
     const { id } = req.params;
     const validatedData = updateContentSchema.parse(req.body);
-    const { text, imageUrl, scheduleAt, frequency, active, endDate } =
-      validatedData;
+    const { text, imageUrl, scheduleAt, frequency, active, endDate, chatGroupIds } = validatedData;
 
     const contentId = parseInt(id);
     if (isNaN(contentId)) {
@@ -67,6 +67,9 @@ export const updateContent = async (
         frequency,
         active,
         user: { connect: { id: userId } },
+        chatGroups: chatGroupIds ? {
+          set: chatGroupIds.map((id: number) => ({ id })),
+        } : undefined,
       },
     });
 
